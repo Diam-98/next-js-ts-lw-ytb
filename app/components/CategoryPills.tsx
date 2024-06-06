@@ -1,5 +1,5 @@
 'use client'
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import Button from './button'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 
@@ -17,10 +17,32 @@ export default function CategoryPills({
   onSelect,
 }: categoryPillProps) {
   const [translate, setTransLate] = useState(0)
-  const [isLeftVisible, setIsLeftVisible] = useState(true)
+  const [isLeftVisible, setIsLeftVisible] = useState(false)
   const [isRightVisible, setIsRightVisible] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (containerRef.current == null) return
+
+    const observer = new ResizeObserver((entries) => {
+      const container = entries[0]?.target
+      if (container == null) return
+
+      setIsLeftVisible(translate > 0)
+      setIsRightVisible(
+        translate + container.clientWidth < container.scrollWidth
+      )
+    })
+
+    observer.observe(containerRef.current)
+
+    return () => {
+      observer.disconnect()
+    }
+  }, [categories, translate])
+
   return (
-    <div className='overflow-x-hidden relative'>
+    <div ref={containerRef} className='overflow-x-hidden relative'>
       <div
         className='flex whitespace-nowrap gap-3 transition-transform w-[max-content]'
         style={{ transform: `translateX(-${translate}px)` }}
@@ -61,6 +83,20 @@ export default function CategoryPills({
             variant='ghost'
             size='icon'
             className='h-full aspect-square w-auto'
+            onClick={() => {
+              setTransLate((translate) => {
+                if (containerRef.current == null) {
+                  return translate
+                }
+                const newTranslate = translate + TRANSLATE_AMOUNT
+                const edge = containerRef.current.scrollWidth
+                const width = containerRef.current.clientWidth
+                if (newTranslate + width >= edge) {
+                  return edge - width
+                }
+                return newTranslate
+              })
+            }}
           >
             <ChevronRight />
           </Button>
